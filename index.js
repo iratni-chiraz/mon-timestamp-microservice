@@ -17,6 +17,9 @@ app.get('/api/hello', function (req, res) {
   res.json({ greeting: 'hello API' });
 });
 
+// ============================================
+// ROUTE 1 : Timestamp Microservice
+// ============================================
 app.get('/api/:date?', function (req, res) {
   const { date } = req.params;
   let parsedDate;
@@ -38,23 +41,29 @@ app.get('/api/:date?', function (req, res) {
     utc: parsedDate.toUTCString(),
   });
 });
-// Route Request Header Parser Microservice
+
+// ============================================
+// ROUTE 2 : Request Header Parser Microservice
+// ============================================
 app.get('/api/whoami', function (req, res) {
-  // IP address
-  const ipaddress = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
-  
-  // Language
+  const ipaddress =
+    req.headers['x-forwarded-for'] ||
+    req.ip ||
+    req.socket.remoteAddress;
+
   const language = req.headers['accept-language'];
-  
-  // Software (User-Agent)
   const software = req.headers['user-agent'];
-  
+
   res.json({
     ipaddress: ipaddress,
     language: language,
-    software: software
+    software: software,
   });
 });
+
+// ============================================
+// Lancement du serveur
+// ============================================
 var listener = app.listen(process.env.PORT || 3000, function () {
   console.log('Your app is listening on port ' + listener.address().port);
 });
