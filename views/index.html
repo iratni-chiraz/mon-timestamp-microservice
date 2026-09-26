@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Timestamp Microservice</title>
+    <title>File Metadata Microservice</title>
   </head>
   <body>
-    <h1>Timestamp Microservice</h1>
+    <h1>File Metadata Microservice</h1>
     <hr>
-    <h3>Example Usage:</h3>
+    <form action="/api/fileanalyse" method="post" enctype="multipart/form-data">
+      <input id="inputfield" type="file" name="upfile">
+      <button type="submit">Upload</button>
+    </form>
+    <p><small>Tests rapides :</small></p>
     <ul>
-      <li><a href="/api/2015-12-25">/api/2015-12-25</a></li>
+      <li><a href="/api/whoami">/api/whoami</a></li>
       <li><a href="/api/1451001600000">/api/1451001600000</a></li>
+      <li><a href="/api/users">/api/users</a></li>
     </ul>
-    <h3>Example Output:</h3>
-    <p>{"unix":1451001600000,"utc":"Fri, 25 Dec 2015 00:00:00 GMT"}</p>
   </body>
 </html>
