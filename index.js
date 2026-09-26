@@ -23,8 +23,8 @@ app.get('/api/hello', function (req, res) {
 });
 
 // ============================================
-// ROUTE : Header Parser Microservice
-// (doit être AVANT /api/:date?)
+// ROUTE 1 : Header Parser Microservice
+// (DOIT être AVANT /api/:date?)
 // ============================================
 app.get('/api/whoami', function (req, res) {
   const ipaddress =
@@ -43,9 +43,8 @@ app.get('/api/whoami', function (req, res) {
 });
 
 // ============================================
-// ROUTE : URL Shortener Microservice
+// ROUTE 2 : URL Shortener Microservice
 // ============================================
-// Stockage en mémoire (remis à zéro si l'app redémarre)
 const urlDatabase = {};
 let nextId = 1;
 
@@ -53,12 +52,12 @@ let nextId = 1;
 app.post('/api/shorturl', function (req, res) {
   const originalUrl = req.body.url;
 
-  // Valider le format de l'URL
+  // Valider le format : doit commencer par http:// ou https://
   if (!originalUrl || !/^https?:\/\/.+/.test(originalUrl)) {
     return res.json({ error: 'invalid url' });
   }
 
-  // Extraire le host pour vérifier qu'il existe
+  // Extraire le hostname
   let hostname;
   try {
     hostname = new URL(originalUrl).hostname;
@@ -66,13 +65,13 @@ app.post('/api/shorturl', function (req, res) {
     return res.json({ error: 'invalid url' });
   }
 
-  // Vérifier que le host existe (résolution DNS)
+  // Vérifier que le domaine existe (résolution DNS)
   dns.lookup(hostname, function (err) {
     if (err) {
       return res.json({ error: 'invalid url' });
     }
 
-    // Créer ou récupérer l'ID court
+    // Créer un nouvel ID court
     const shortUrl = nextId++;
     urlDatabase[shortUrl] = originalUrl;
 
@@ -96,8 +95,8 @@ app.get('/api/shorturl/:short_url', function (req, res) {
 });
 
 // ============================================
-// ROUTE : Timestamp Microservice
-// (doit être APRÈS les routes spécifiques)
+// ROUTE 3 : Timestamp Microservice
+// (DOIT être APRÈS /api/whoami et /api/shorturl)
 // ============================================
 app.get('/api/:date?', function (req, res) {
   const { date } = req.params;
