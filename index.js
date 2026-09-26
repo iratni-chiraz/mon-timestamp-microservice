@@ -24,7 +24,6 @@ app.get('/api/hello', function (req, res) {
 
 // ============================================
 // ROUTE 1 : Header Parser Microservice
-// (DOIT être AVANT /api/:date?)
 // ============================================
 app.get('/api/whoami', function (req, res) {
   const ipaddress =
@@ -32,13 +31,10 @@ app.get('/api/whoami', function (req, res) {
     req.ip ||
     req.socket.remoteAddress;
 
-  const language = req.headers['accept-language'];
-  const software = req.headers['user-agent'];
-
   res.json({
     ipaddress: ipaddress,
-    language: language,
-    software: software,
+    language: req.headers['accept-language'],
+    software: req.headers['user-agent'],
   });
 });
 
@@ -48,16 +44,13 @@ app.get('/api/whoami', function (req, res) {
 const urlDatabase = {};
 let nextId = 1;
 
-// POST : créer une URL courte
 app.post('/api/shorturl', function (req, res) {
   const originalUrl = req.body.url;
 
-  // Valider le format : doit commencer par http:// ou https://
   if (!originalUrl || !/^https?:\/\/.+/.test(originalUrl)) {
     return res.json({ error: 'invalid url' });
   }
 
-  // Extraire le hostname
   let hostname;
   try {
     hostname = new URL(originalUrl).hostname;
@@ -65,13 +58,11 @@ app.post('/api/shorturl', function (req, res) {
     return res.json({ error: 'invalid url' });
   }
 
-  // Vérifier que le domaine existe (résolution DNS)
   dns.lookup(hostname, function (err) {
     if (err) {
       return res.json({ error: 'invalid url' });
     }
 
-    // Créer un nouvel ID court
     const shortUrl = nextId++;
     urlDatabase[shortUrl] = originalUrl;
 
@@ -82,7 +73,6 @@ app.post('/api/shorturl', function (req, res) {
   });
 });
 
-// GET : rediriger vers l'URL originale
 app.get('/api/shorturl/:short_url', function (req, res) {
   const shortUrl = req.params.short_url;
   const originalUrl = urlDatabase[shortUrl];
@@ -95,8 +85,134 @@ app.get('/api/shorturl/:short_url', function (req, res) {
 });
 
 // ============================================
-// ROUTE 3 : Timestamp Microservice
-// (DOIT être APRÈS /api/whoami et /api/shorturl)
+// ROUTE 3 : Exercise Tracker Microservice
+// ============================================
+const users = [];
+
+// Générer un _id unique type MongoDB (24 hex)
+function generateId() {
+  return (
+    Math.random().toString(16).slice(2, 14) +
+    Math.random().toString(16).slice(2, 14)
+  );
+}
+
+// POST /api/users → créer un utilisateur
+app.post('/api/users', function (req, res) {
+  const username = req.body.username;
+
+  if (!username) {
+    return res.json({ error: 'username is required' });
+  }
+
+  const user = {
+    username: username,
+    _id: generateId(),
+    log: [],
+  };
+
+  users.push(user);
+
+  res.json({
+    username: user.username,
+    _id: user._id,
+  });
+});
+
+// GET /api/users → lister tous les utilisateurs
+app.get('/api/users', function (req, res) {
+  const list = users.map(function (u) {
+    return { username: u.username, _id: u._id };
+  });
+  res.json(list);
+});
+
+// POST /api/users/:_id/exercises → ajouter un exercice
+app.post('/api/users/:_id/exercises', function (req, res) {
+  const userId = req.params._id;
+  const user = users.find(function (u) {
+    return u._id === userId;
+  });
+
+  if (!user) {
+    return res.json({ error: 'user not found' });
+  }
+
+  const { description, duration, date } = req.body;
+
+  // Date : si non fournie, utiliser la date actuelle
+  let exerciseDate;
+  if (date) {
+    exerciseDate = new Date(date);
+    if (isNaN(exerciseDate.getTime())) {
+      exerciseDate = new Date();
+    }
+  } else {
+    exerciseDate = new Date();
+  }
+
+  const exercise = {
+    description: String(description),
+    duration: Number(duration),
+    date: exerciseDate.toDateString(),
+  };
+
+  user.log.push(exercise);
+
+  res.json({
+    username: user.username,
+    description: exercise.description,
+    duration: exercise.duration,
+    date: exercise.date,
+    _id: user._id,
+  });
+});
+
+// GET /api/users/:_id/logs → voir les logs
+app.get('/api/users/:_id/logs', function (req, res) {
+  const userId = req.params._id;
+  const user = users.find(function (u) {
+    return u._id === userId;
+  });
+
+  if (!user) {
+    return res.json({ error: 'user not found' });
+  }
+
+  // Filtres optionnels : from, to, limit
+  let log = user.log.slice();
+
+  const { from, to, limit } = req.query;
+
+  if (from) {
+    const fromDate = new Date(from);
+    log = log.filter(function (ex) {
+      return new Date(ex.date) >= fromDate;
+    });
+  }
+
+  if (to) {
+    const toDate = new Date(to);
+    log = log.filter(function (ex) {
+      return new Date(ex.date) <= toDate;
+    });
+  }
+
+  if (limit) {
+    log = log.slice(0, Number(limit));
+  }
+
+  res.json({
+    username: user.username,
+    count: log.length,
+    _id: user._id,
+    log: log,
+  });
+});
+
+// ============================================
+// ROUTE 4 : Timestamp Microservice
+// (DOIT être en DERNIER — catch-all)
 // ============================================
 app.get('/api/:date?', function (req, res) {
   const { date } = req.params;
